@@ -492,3 +492,31 @@ Subsystems should be added here before implementation.
 
 No subsystem should violate ownership boundaries.
 
+
+
+\## Engine Boundary Rule
+
+
+
+Roblox engine services should be isolated behind dedicated modules whenever practical.
+
+
+
+Example:
+
+
+
+UserInputService → InputController
+
+
+
+Players → CharacterController
+
+
+
+Workspace.CurrentCamera → CameraController
+
+
+
+Other gameplay systems should consume those abstractions rather than Roblox services directly.
+

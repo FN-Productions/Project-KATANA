@@ -378,3 +378,20 @@ refer to:
 - CHANGELOG.md
 - Git history
 - GitHub Issues
+
+
+
+# Project Architecture
+
+Gameplay systems should depend on project abstractions rather than Roblox engine APIs whenever practical.
+
+Engine-specific code should remain isolated inside dedicated modules.
+
+Completed:
+
+- Bootstrap subsystem
+- Logger subsystem
+- Input subsystem
+- Character subsystem
+- Movement subsystem
+- Camera subsystem

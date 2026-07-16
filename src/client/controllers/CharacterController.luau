@@ -10,6 +10,7 @@ export type CharacterController = {
 	start: () -> (),
 	getCharacter: () -> Model?,
 	getHumanoid: () -> Humanoid?,
+	getRootPart: () -> BasePart?,
 	isAlive: () -> boolean,
 }
 
@@ -27,12 +28,14 @@ local started = false
 local state: {
 	character: Model?,
 	humanoid: Humanoid?,
+	rootPart: BasePart?,
 } = {
 	character = nil,
 	humanoid = nil,
+	rootPart = nil,
 }
 
--- Caches the character and its humanoid once spawned.
+-- Caches the character, humanoid, and root part once spawned.
 local function onCharacterAdded(character: Model): ()
 	state.character = character
 	
@@ -43,6 +46,13 @@ local function onCharacterAdded(character: Model): ()
 	else
 		Logger.error(`Failed to resolve Humanoid for character '{character.Name}' within timeout.`)
 	end
+
+	local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+	if rootPart and rootPart:IsA("BasePart") then
+		state.rootPart = rootPart
+	else
+		Logger.error(`Failed to resolve HumanoidRootPart for character '{character.Name}' within timeout.`)
+	end
 end
 
 -- Clears references immediately to avoid memory leaks with dead/destroyed character instances.
@@ -50,6 +60,7 @@ local function onCharacterRemoving(character: Model): ()
 	if state.character == character then
 		state.character = nil
 		state.humanoid = nil
+		state.rootPart = nil
 	end
 end
 
@@ -73,6 +84,10 @@ local CharacterController: CharacterController = {
 
 	getHumanoid = function(): Humanoid?
 		return state.humanoid
+	end,
+
+	getRootPart = function(): BasePart?
+		return state.rootPart
 	end,
 
 	isAlive = function(): boolean

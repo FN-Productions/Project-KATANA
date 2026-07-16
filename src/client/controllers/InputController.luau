@@ -11,7 +11,7 @@ export type InputController = {
 	getMoveVector: () -> Vector3,
 	isSprintHeld: () -> boolean,
 	isJumpHeld: () -> boolean,
-	getMouseDelta: () -> Vector2,
+	getLookDelta: () -> Vector2,
 }
 
 local UserInputService = game:GetService("UserInputService")
@@ -35,6 +35,11 @@ local activeKeys = {
 	left = false,
 	right = false,
 }
+
+-- Configures hardware level mouse settings to lock cursor during gameplay.
+local function initializeMouseBehavior(): ()
+	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+end
 
 -- Normalizes the 3D movement vector to ensure diagonal movement speed isn't doubled.
 local function updateMoveVector(): ()
@@ -104,6 +109,11 @@ local InputController: InputController = {
 		if started then return end
 		started = true
 
+		initializeMouseBehavior()
+
+		-- Re-lock mouse center if player temporarily unlocks it (e.g. window focus switching).
+		UserInputService.WindowFocused:Connect(initializeMouseBehavior)
+
 		-- Defer binding to runtime startup rather than module load time.
 		UserInputService.InputBegan:Connect(function(input, processed)
 			handleInput(input, processed, true)
@@ -139,7 +149,7 @@ local InputController: InputController = {
 		return inputState.isJumpHeld
 	end,
 
-	getMouseDelta = function(): Vector2
+	getLookDelta = function(): Vector2
 		return inputState.mouseDelta
 	end,
 }

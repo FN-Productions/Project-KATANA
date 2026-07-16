@@ -15,6 +15,9 @@ local function initializeControllers(): ()
 
 	local MovementController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("MovementController"))
 	MovementController.start()
+
+	local CameraController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("CameraController"))
+	CameraController.start()
 end
 
 local function initializeUI(): ()
