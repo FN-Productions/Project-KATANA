@@ -7,7 +7,11 @@ local Logger = require(Shared:WaitForChild("core"):WaitForChild("Logger"))
 
 -- Private initialization functions
 local function initializeControllers(): ()
-	-- Future controller setup goes here.
+	local CharacterController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("CharacterController"))
+	CharacterController.start()
+
+	local InputController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("InputController"))
+	InputController.start()
 end
 
 local function initializeUI(): ()
