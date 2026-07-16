@@ -24,6 +24,9 @@ local function initializeControllers(): ()
 
 	local AnimationController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("AnimationController"))
 	AnimationController.start()
+
+	local CombatController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("CombatController"))
+	CombatController.start()
 end
 
 local function initializeUI(): ()
