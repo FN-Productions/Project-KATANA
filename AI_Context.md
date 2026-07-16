@@ -36,7 +36,7 @@ Current Sprint:
 
 Current Milestone:
 
-\- Professional Roblox development environment
+\-  Engine Bootstrap
 
 
 
@@ -254,8 +254,7 @@ feature/\*
 
 
 
-Complete Rojo synchronization.
-
+Build engine startup pipeline
 
 
 After that:
@@ -362,13 +361,20 @@ Always review AI-generated code before merging.
 
 
 
-\# Last Updated
+# Current State
 
-
-
+Current Sprint:
 Sprint 3
 
-Foundation Complete
+Current Milestone:
+Engine Bootstrap
 
-Rojo Installed
+Current Focus:
+Building the KATANA Engine foundation.
 
+For implementation progress and completed work,
+refer to:
+
+- CHANGELOG.md
+- Git history
+- GitHub Issues
