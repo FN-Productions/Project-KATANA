@@ -21,6 +21,9 @@ local function initializeControllers(): ()
 
 	local StateMachine = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("StateMachine"))
 	StateMachine.start()
+
+	local AnimationController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("AnimationController"))
+	AnimationController.start()
 end
 
 local function initializeUI(): ()
