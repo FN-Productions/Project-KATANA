@@ -9,6 +9,8 @@
 
 export type AnimationController = {
 	start: () -> (),
+	play: (animationId: string) -> (),
+	stop: (animationId: string) -> (),
 }
 
 local Players = game:GetService("Players")
@@ -30,6 +32,9 @@ local updateConnection: RBXScriptConnection? = nil
 
 -- Caches loaded AnimationTracks to prevent costly duplicate load invocations.
 local tracks: { [string]: AnimationTrack } = {}
+
+-- Caches dynamically loaded/requested tracks (e.g. attacks) per character lifecycle.
+local dynamicTracks: { [string]: AnimationTrack } = {}
 
 -- Loads character tracks once the humanoid and animator are fully initialized.
 local function onCharacterAdded(character: Model): ()
@@ -78,6 +83,12 @@ local function onCharacterRemoving(character: Model): ()
 		track:Stop(0)
 	end
 	table.clear(tracks)
+
+	for _, track in pairs(dynamicTracks) do
+		track:Stop(0)
+	end
+	table.clear(dynamicTracks)
+
 	lastState = nil
 end
 
@@ -122,6 +133,31 @@ local AnimationController: AnimationController = {
 		-- NOTE: Polling the StateMachine is a temporary solution for Version 1.
 		-- Future iterations should transition this to an event-driven change notification system.
 		updateConnection = RunService.PostSimulation:Connect(updateAnimations)
+	end,
+
+	play = function(animationId: string): ()
+		local track = dynamicTracks[animationId]
+		if not track then
+			local humanoid = CharacterController.getHumanoid()
+			local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+			if animator then
+				local animation = Instance.new("Animation")
+				animation.AnimationId = animationId
+				track = animator:LoadAnimation(animation)
+				dynamicTracks[animationId] = track
+			end
+		end
+
+		if track then
+			track:Play(0.1)
+		end
+	end,
+
+	stop = function(animationId: string): ()
+		local track = dynamicTracks[animationId]
+		if track then
+			track:Stop(0.1)
+		end
 	end,
 }
 

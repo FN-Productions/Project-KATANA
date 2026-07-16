@@ -1,440 +1,325 @@
-\# KTN-011 — AttackSystem Specification
-
-
+# KTN-011 — AttackSystem Specification
 
 Status: Draft
 
-
-
 Owner: FN Productions
-
-
 
 Related Documents:
 
+- MDS-0005 — Combat System
+- MDS-0006 — Combat Pipeline
+- ADR-0009 — Data-Driven Combat Architecture
+- TDD-0002 — Attack Definitions
+- KTN-009 — CombatController
+- KTN-010 — HitboxSystem
 
+---
 
-\- MDS-0005 — Combat System
+# Purpose
 
-\- MDS-0006 — Combat Pipeline
+AttackSystem is the central execution engine for combat attacks.
 
-\- ADR-0009 — Data-Driven Combat Architecture
-
-\- TDD-0002 — Attack Definitions
-
-\- KTN-010 — HitboxSystem
-
-
-
-\---
-
-
-
-\# Purpose
-
-
-
-AttackSystem executes Attack Definitions.
-
-
-
-It coordinates the lifecycle of an attack by interpreting attack data and delegating work to specialized systems.
-
-
+It interprets immutable Attack Definitions, creates temporary Runtime Attack instances, coordinates attack execution, and delegates specialized work to other combat systems.
 
 AttackSystem owns attack execution.
 
+It does **NOT** own combat decisions.
 
+---
 
-It does not own combat decisions.
+# Responsibilities
 
+- Resolve Attack Definitions through the Attack Registry.
+- Validate attack execution requests.
+- Create Runtime Attack instances.
+- Execute attack timelines.
+- Coordinate startup, active, and recovery phases.
+- Request animation playback.
+- Create and evaluate hitboxes through HitboxSystem.
+- Coordinate future stamina consumption.
+- Safely terminate attack execution.
+- Destroy Runtime Attack instances after completion.
 
+---
 
-\---
-
-
-
-\# Responsibilities
-
-
-
-\- Execute Attack Definitions.
-
-\- Validate attack data.
-
-\- Coordinate attack timing.
-
-\- Coordinate startup, active, and recovery phases.
-
-\- Request hitbox activation.
-
-\- Request stamina consumption.
-
-\- Request animation playback.
-
-\- Notify completion.
-
-
-
-\---
-
-
-
-\# Non-Goals
-
-
+# Non-Goals
 
 AttackSystem does NOT:
 
+- Read player input.
+- Decide when attacks should begin.
+- Detect collisions.
+- Apply damage.
+- Own combat state.
+- Own weapon logic.
+- Own combo trees.
+- Control the camera.
+- Control UI.
+- Perform networking.
 
+---
 
-\- Read player input.
+# Runtime Attack
 
-\- Decide when attacks should begin.
+A Runtime Attack is a temporary execution object created from an immutable Attack Definition.
 
-\- Detect collisions.
+Attack Definitions are never modified during gameplay.
 
-\- Apply damage.
+A Runtime Attack owns only execution data required while an attack is active.
 
-\- Own combat state.
+Typical runtime data includes:
 
-\- Control camera.
+- elapsed execution time
+- current attack phase
+- active hitboxes
+- execution status
+- temporary runtime references
 
-\- Manage lock-on.
+Runtime Attack instances are destroyed immediately after execution completes or is cancelled.
 
-\- Manage UI.
+---
 
+# One Active Attack Rule
 
+Version 1 supports only one active Runtime Attack per character.
 
-\---
+If an execution request is received while another Runtime Attack is active, the request fails unless the current attack has first been cancelled.
 
+Support for concurrent attack execution is outside the scope of Version 1.
 
+---
 
-\# Public API
-
-
+# Public API
 
 ```luau
-
-execute(attackDefinition)
-
-
+execute(attackId)
 
 cancel()
 
-
-
 isExecuting()
-
 ```
 
+No additional public APIs are included in Version 1.
 
+---
 
-No additional public APIs in Version 1.
-
-
-
-\---
-
-
-
-\# Dependencies
-
-
+# Dependencies
 
 Consumes:
 
+- Attack Registry
+- HitboxSystem
+- AnimationController
 
+Future:
 
-\- Attack Definitions
-
-\- HitboxSystem
-
-\- AnimationController
-
-\- StaminaSystem
-
-
+- DamageSystem
+- StaminaSystem
+- ComboTree
+- WeaponSystem
 
 Must NOT depend on:
 
+- InputController
+- CameraController
+- UI
+- UserInputService
 
+---
 
-\- InputController
+# Runtime Behavior
 
-\- CameraController
+Attack execution follows the sequence below:
 
-\- UI
-
-
-
-\---
-
-
-
-\# Runtime Behavior
-
-
-
-Attack execution follows this sequence:
-
-
-
-Validate
-
-
+Resolve Attack Definition
 
 ↓
 
-
-
-Consume Resources
-
-
+Validate Request
 
 ↓
 
-
-
-Play Animation
-
-
+Create Runtime Attack
 
 ↓
 
-
-
-Startup
-
-
+Request Animation Playback
 
 ↓
 
-
-
-Activate Hitbox
-
-
+Execute Startup Phase
 
 ↓
 
-
-
-Active Frames
-
-
+Create / Evaluate Hitboxes
 
 ↓
 
-
-
-Deactivate Hitbox
-
-
+Execute Active Phase
 
 ↓
 
-
-
-Recovery
-
-
+Execute Recovery Phase
 
 ↓
 
+Destroy Runtime Attack
 
+↓
 
-Complete
+Execution Complete
 
+AttackSystem owns the execution timeline.
 
+Attack Definitions only describe the timeline.
 
-\---
+---
 
-
-
-\# Validation
-
-
+# Validation
 
 Before execution:
 
+- Attack ID is valid.
+- Attack Definition exists.
+- Required fields exist.
+- Definition is internally valid.
+- No Runtime Attack is currently executing.
+- Required future resources are available.
 
+Execution immediately fails if validation does not succeed.
 
-\- Attack Definition exists.
+---
 
-\- Required fields exist.
+# Attack Definitions
 
-\- Timings are valid.
+Attack Definitions are immutable data assets.
 
-\- Resources are sufficient.
+AttackSystem may read Attack Definitions.
 
-\- Attack is executable.
+AttackSystem must never modify Attack Definitions.
 
+All temporary execution state belongs exclusively to the Runtime Attack.
 
+---
 
-Execution stops immediately if validation fails.
+# Hitbox Ownership
 
+AttackSystem owns hitbox timing.
 
+HitboxSystem owns collision evaluation.
 
-\---
+AttackSystem determines:
 
+- when hitboxes are created
+- when hitboxes are evaluated
+- when hitboxes are destroyed
 
+HitboxSystem performs only collision detection.
 
-\# Timing
+---
 
+# Animation Ownership
 
+AttackSystem owns animation requests.
 
-Attack timing is completely data-driven.
+AnimationController owns animation playback.
 
+AnimationController never determines gameplay progression.
 
+AttackSystem remains the single owner of attack execution.
 
-The Attack Definition specifies:
+---
 
+# Timing
 
+Attack timing is entirely data-driven.
 
-\- Startup
+Attack Definitions describe:
 
-\- Active
+- Startup
+- Active
+- Recovery
 
-\- Recovery
+AttackSystem executes those timings.
 
+AttackSystem must never hardcode attack durations.
 
+---
 
-AttackSystem must never hardcode timings.
+# Cancellation
 
+Version 1 supports only full attack cancellation.
 
+Cancellation immediately:
 
-\---
+- destroys active hitboxes
+- destroys the Runtime Attack
+- releases temporary execution resources
 
+Attack buffering, cancel windows, combo cancels, and animation cancels are future features.
 
+---
 
-\# Cancellation
+# Completion
 
+When execution finishes:
 
+- active hitboxes are destroyed
+- temporary runtime resources are released
+- Runtime Attack is destroyed
+- AttackSystem returns to the idle execution state
 
-Version 1 supports only full cancellation.
+No temporary execution state may persist.
 
+---
 
+# Failure Modes
 
-Partial cancels, combo cancels, animation cancels, and buffering are future features.
+Execution must terminate safely if:
 
-
-
-\---
-
-
-
-\# Completion
-
-
-
-When recovery finishes:
-
-
-
-\- Temporary resources are released.
-
-\- Active hitboxes are destroyed.
-
-\- Completion is reported to CombatController.
-
-
-
-\---
-
-
-
-\# Failure Modes
-
-
-
-If execution fails:
-
-
-
-\- Invalid Attack Definition
-
-\- Missing animation
-
-\- Missing hitbox
-
-\- Stamina failure
-
-\- Runtime interruption
-
-
-
-The current attack must terminate safely.
-
-
-
-No partial attack state may remain active.
-
-
-
-\---
-
-
-
-\# Definition of Done
-
-
-
-\- \[ ] Compiles with --!strict
-
-\- \[ ] Executes Attack Definitions
-
-\- \[ ] Data-driven timing
-
-\- \[ ] Uses HitboxSystem
-
-\- \[ ] Uses StaminaSystem
-
-\- \[ ] Uses AnimationController
-
-\- \[ ] Safe cancellation
-
-\- \[ ] Proper cleanup
-
-\- \[ ] Code reviewed
-
-\- \[ ] Playtested
-
-\- \[ ] Committed
-
-
-
-\---
-
-
-
-\# Future Extensions
-
-
+- Attack ID is invalid
+- Attack Definition is missing
+- Runtime Attack creation fails
+- Animation cannot be requested
+- Hitbox creation fails
+- Runtime execution is interrupted
+
+Failures must never leave partial execution state active.
+
+---
+
+# Definition of Done
+
+- [ ] Compiles with --!strict
+- [ ] Resolves Attack Definitions through the Attack Registry
+- [ ] Creates Runtime Attack instances
+- [ ] Maintains one active Runtime Attack
+- [ ] Uses HitboxSystem
+- [ ] Uses AnimationController
+- [ ] Data-driven execution timeline
+- [ ] Safe cancellation
+- [ ] Proper cleanup
+- [ ] Code reviewed
+- [ ] Playtested
+- [ ] Committed
+
+---
+
+# Future Extensions
 
 Future versions may support:
 
-
-
-\- Combo chains
-
-\- Attack buffering
-
-\- Cancel windows
-
-\- Perfect attacks
-
-\- Charge attacks
-
-\- Hyper Armor
-
-\- Root Motion
-
-\- Hit Stop
-
-\- Air attacks
-
-\- Weapon-specific execution
-
-\- Multiplayer prediction
-
+- ComboTree integration
+- Attack buffering
+- Cancel windows
+- Perfect attacks
+- Charge attacks
+- Hyper Armor
+- Root Motion
+- Hit Stop
+- Air attacks
+- Weapon plug-in architecture
+- Multiplayer prediction
+- Replay support
+- Multi-hit execution
+- Concurrent Runtime Attacks
