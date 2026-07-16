@@ -1,358 +1,328 @@
-\# KTN-010 — HitboxSystem Specification
-
-
+# KTN-010 — HitboxSystem Specification
 
 Status: Draft
 
-
-
 Owner: FN Productions
-
-
 
 Related Documents:
 
+- MDS-0005 — Combat System
+- MDS-0006 — Combat Pipeline
+- CDD-0001 — Combat Philosophy
+- CDD-0002 — Combat Architecture
+- ADR-0002 — Data-Driven Combat
+- TDD-0002 — Attack Definitions
 
+---
 
-\- MDS-0005 — Combat System
+# Purpose
 
-\- MDS-0006 — Combat Pipeline
+HitboxSystem is responsible for detecting valid physical intersections between attacks and potential targets.
 
-\- ADR-0009 — Data-Driven Combat Architecture
+It provides a generic, data-driven interface for creating, evaluating, and destroying hitboxes.
 
-\- TDD-0002 — Attack Definitions
+HitboxSystem owns collision detection only.
 
+It does not make gameplay decisions.
 
+---
 
-\---
+# Responsibilities
 
+- Create hitbox instances.
+- Own hitbox lifecycle.
+- Compute hitbox transforms.
+- Evaluate physical intersections.
+- Perform engine-level filtering.
+- Prevent duplicate hits.
+- Produce HitboxResult objects.
+- Destroy hitboxes.
 
+---
 
-\# Purpose
+# It Is NOT Responsible For
 
+HitboxSystem must never directly implement or own:
 
+- Damage calculation
+- Combat logic
+- Combo logic
+- Weapon logic
+- Animation playback
+- Stamina
+- Lock-On
+- Visual effects
+- Audio
+- Gameplay state
 
-HitboxSystem is responsible for detecting valid combat hits.
+---
 
+# Design Philosophy
 
+Project KATANA uses query-based hit detection.
 
-It provides a generic interface for creating, activating, updating, and destroying hitboxes.
+Hitboxes are not physical Parts.
 
+Instead, HitboxSystem computes a hitbox transform every update while the hitbox is active and performs overlap queries using Roblox's spatial query APIs.
 
+This produces deterministic, data-driven hit detection that remains independent of physics simulation.
 
-The system is completely independent of weapons, animations, and combat logic.
+---
 
-
-
-\---
-
-
-
-\# Responsibilities
-
-
-
-\- Spawn hitboxes.
-
-\- Update hitboxes.
-
-\- Detect collisions.
-
-\- Report valid hits.
-
-\- Prevent duplicate hits.
-
-\- Destroy hitboxes.
-
-
-
-\---
-
-
-
-\# Non-Goals
-
-
-
-HitboxSystem does NOT:
-
-
-
-\- Apply damage.
-
-\- Play animations.
-
-\- Consume stamina.
-
-\- Decide when attacks begin.
-
-\- Manage combo logic.
-
-\- Spawn visual effects.
-
-\- Spawn audio.
-
-\- Own combat state.
-
-
-
-\---
-
-
-
-\# Public API
-
-
+# Public API
 
 ```luau
+createHitbox()
 
-create()
-
-
-
-activate()
-
-
-
-deactivate()
-
-
-
-destroy()
-
+destroyHitbox()
 ```
 
+Hitbox activation and deactivation are internal lifecycle operations.
 
+Version 1 intentionally exposes only minimal public APIs.
 
-No additional public APIs in Version 1.
+---
 
+# Ownership
 
+HitboxSystem owns:
 
-\---
+- Hitbox instances
+- Hitbox lifecycle
+- Duplicate-hit cache
+- Query execution
+- Collision filtering
+- HitboxResult generation
 
+AttackSystem owns:
 
+- Attack lifecycle
+- Gameplay validation
+- Damage routing
+- Combat flow
 
-\# Dependencies
+DamageSystem owns:
 
+- Damage application
 
+StateMachine owns:
+
+- Gameplay state
+
+Ownership never transfers between systems.
+
+---
+
+# Dependencies
 
 Consumes:
 
-
-
-\- Attack Definitions (future)
-
-\- Roblox Physics
-
-
+- Roblox Spatial Queries
+- Workspace
+- OverlapParams
+- Attack Definitions (future)
 
 Must NOT depend on:
 
+- CombatController
+- AnimationController
+- CameraController
+- InputController
+- UI
+- DamageSystem
 
+---
 
-\- InputController
+# Runtime Behavior
 
-\- CameraController
-
-\- AnimationController
-
-\- CombatController
-
-\- UI
-
-
-
-\---
-
-
-
-\# Runtime Behavior
-
-
-
-A hitbox progresses through the following lifecycle:
-
-
+Hitboxes follow the lifecycle below:
 
 Created
 
-
-
 ↓
-
-
 
 Inactive
 
-
-
 ↓
-
-
 
 Active
 
+↓
 
+Evaluate Query
 
 ↓
 
+Produce HitboxResult
 
+↓
 
 Inactive
 
-
-
 ↓
-
-
 
 Destroyed
 
+Only active hitboxes perform collision queries.
 
+Destroyed hitboxes must immediately release all runtime resources.
 
-Only active hitboxes may detect collisions.
+---
 
+# Transform Model
 
+Hitboxes are defined in character-local space.
 
-Destroyed hitboxes must release all runtime resources.
+Each attack specifies:
 
+- Size
+- Offset
+- Rotation
 
+During evaluation the final transform is computed from:
 
-\---
+Character Transform
 
++
 
+Attack Offset
 
-\# Collision Rules
++
 
+Attack Rotation
 
+↓
 
-A valid collision must satisfy all conditions:
+Final Hitbox Transform
 
+No physical Parts are created.
 
+---
 
-\- Hitbox is active.
+# Query Model
 
-\- Target exists.
+While active, a hitbox continuously evaluates overlap queries.
 
-\- Target is valid.
+The default query implementation uses:
 
-\- Target has not already been hit by this hitbox.
+```luau
+Workspace:GetPartBoundsInBox()
+```
 
-\- Collision is permitted by future combat rules.
+The query executes every evaluation step until the hitbox is deactivated.
 
+Future hitbox shapes may use different query methods without changing the external API.
 
+---
 
-Otherwise the collision is ignored.
+# Collision Filtering
 
+HitboxSystem performs only engine-level filtering.
 
+Examples include:
 
-\---
+- Ignore the hitbox owner.
+- Ignore duplicate targets during the current activation.
+- Apply OverlapParams filtering.
+- Ignore invalid instances.
 
+Gameplay validation is performed by higher-level combat systems.
 
+---
 
-\# Duplicate Hit Prevention
+# HitboxResult
 
+HitboxSystem returns structured HitboxResult objects rather than raw target lists.
 
+Version 1 includes:
 
-A hitbox must never register multiple hits against the same target during a single activation.
+- Targets
+- HitCount
 
+Future versions may extend HitboxResult with additional metadata without changing the public API.
 
+---
 
-Future attacks that intentionally support multiple hits will create separate activation windows.
+# Duplicate Hit Prevention
 
+Each hitbox instance owns its own duplicate-hit cache.
 
+A target may only be registered once during a single hitbox activation.
 
-\---
+When the hitbox is destroyed, its duplicate cache is destroyed with it.
 
+No global duplicate cache exists.
 
+---
 
-\# Failure Modes
+# Debug Visualization
 
+Debug visualization is optional.
 
+When enabled:
+
+- Draw hitbox bounds.
+- Display orientation.
+- Visualize active state.
+- Destroy debug geometry with the hitbox.
+
+When disabled:
+
+- No debug geometry is created.
+- Gameplay behavior remains identical.
+
+Debug visualization must never influence gameplay.
+
+---
+
+# Failure Modes
 
 If a hitbox:
 
+- loses its owner,
+- references destroyed instances,
+- encounters invalid configuration,
+- or becomes otherwise invalid,
 
+HitboxSystem must safely destroy the hitbox.
 
-\- loses its owner,
+Failures must never propagate into unrelated gameplay systems.
 
-\- becomes invalid,
+---
 
-\- references destroyed instances,
+# Definition of Done
 
-\- or encounters invalid configuration,
+- [ ] Compiles with --!strict
+- [ ] Query-based implementation
+- [ ] No physical hitbox Parts
+- [ ] Character-local transforms
+- [ ] Engine-level filtering only
+- [ ] Structured HitboxResult
+- [ ] Duplicate-hit prevention
+- [ ] Proper lifecycle ownership
+- [ ] Proper cleanup
+- [ ] Idempotent lifecycle
+- [ ] No combat logic
+- [ ] No animation logic
+- [ ] No damage logic
+- [ ] Code reviewed
+- [ ] Playtested
+- [ ] Committed
 
+---
 
-
-the system should safely destroy the hitbox without affecting unrelated gameplay.
-
-
-
-Failures should never crash the combat pipeline.
-
-
-
-\---
-
-
-
-\# Definition of Done
-
-
-
-\- \[ ] Compiles with --!strict
-
-\- \[ ] Generic implementation
-
-\- \[ ] No combat logic
-
-\- \[ ] No animation logic
-
-\- \[ ] No damage logic
-
-\- \[ ] Duplicate hits prevented
-
-\- \[ ] Proper cleanup
-
-\- \[ ] Idempotent lifecycle
-
-\- \[ ] Code reviewed
-
-\- \[ ] Playtested
-
-\- \[ ] Committed
-
-
-
-\---
-
-
-
-\# Future Extensions
-
-
+# Future Extensions
 
 Future versions may support:
 
-
-
-\- Capsule hitboxes
-
-\- Sphere hitboxes
-
-\- Box hitboxes
-
-\- Swept hitboxes
-
-\- Multi-hit attacks
-
-\- Continuous hitboxes
-
-\- Projectile hitboxes
-
-\- Area-of-effect hitboxes
-
-\- Network reconciliation
-
-\- Debug visualization
-
+- Capsule hitboxes
+- Sphere hitboxes
+- Swept hitboxes
+- Continuous hitboxes
+- Projectile hitboxes
+- Area-of-effect hitboxes
+- Multi-hit attacks
+- Bone-attached hitboxes
+- Debug analytics
+- Network reconciliation
+- Multiplayer authority
