@@ -12,6 +12,9 @@ local function initializeControllers(): ()
 
 	local InputController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("InputController"))
 	InputController.start()
+
+	local MovementController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("MovementController"))
+	MovementController.start()
 end
 
 local function initializeUI(): ()
