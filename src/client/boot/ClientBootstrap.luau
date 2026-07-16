@@ -18,6 +18,9 @@ local function initializeControllers(): ()
 
 	local CameraController = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("CameraController"))
 	CameraController.start()
+
+	local StateMachine = require(script.Parent.Parent:WaitForChild("controllers"):WaitForChild("StateMachine"))
+	StateMachine.start()
 end
 
 local function initializeUI(): ()

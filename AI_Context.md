@@ -30,7 +30,7 @@ Current Phase:
 
 Current Sprint:
 
-\- Sprint 3
+\- Sprint 4
 
 
 
@@ -254,20 +254,11 @@ feature/\*
 
 
 
-Build engine startup pipeline
-
+Build the Character State Machine.
 
 After that:
 
-
-
-1\. Project architecture
-
-2\. Player controller
-
-3\. Camera
-
-4\. Combat prototype
+Combat prototype
 
 
 

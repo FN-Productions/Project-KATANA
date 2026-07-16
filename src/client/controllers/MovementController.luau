@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 
 local CharacterController = require(script.Parent:WaitForChild("CharacterController"))
 local InputController = require(script.Parent:WaitForChild("InputController"))
+local StateMachine = require(script.Parent:WaitForChild("StateMachine"))
 
 -- Idempotency and lifecycle tracking variables.
 local started = false
@@ -70,6 +71,13 @@ local function updateMovement(): ()
 
 	-- Drive character physics using Roblox's native controller step.
 	humanoid:Move(worldDirection, false)
+
+	-- Update character state based on active movement direction.
+	if worldDirection.Magnitude == 0 then
+		StateMachine.setState("Idle")
+	else
+		StateMachine.setState("Walking")
+	end
 end
 
 local MovementController: MovementController = {
